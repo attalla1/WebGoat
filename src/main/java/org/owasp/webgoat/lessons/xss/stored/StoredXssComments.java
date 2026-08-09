@@ -79,13 +79,20 @@ public class StoredXssComments implements AssignmentEndpoint {
 
     List<Comment> comments = userComments.getOrDefault(username, new ArrayList<>());
     comment.setDateTime(LocalDateTime.now().format(fmt));
+
+    // Evaluate the assignment on the RAW input before encoding: encoding rewrites the payload
+    // (e.g. <script> -> &lt;script&gt;), which would make the success check unreachable.
+    String raw = comment.getText();
+    boolean solved = raw != null && raw.contains(phoneHomeString);
+
+    // Store everything user-controlled HTML-encoded so the comment list never executes markup.
     comment.setUser(encode(username));
-    comment.setText(encode(comment.getText()));
+    comment.setText(encode(raw));
 
     comments.add(comment);
     userComments.put(username, comments);
 
-    if (comment.getText().contains(phoneHomeString)) {
+    if (solved) {
       return (success(this).feedback("xss-stored-comment-success").build());
     } else {
       return (failed(this).feedback("xss-stored-comment-failure").build());
