@@ -35,7 +35,7 @@ public class LandingAssignment implements AssignmentEndpoint {
   @PostMapping("/WebWolf/landing")
   @ResponseBody
   public AttackResult click(String uniqueCode, @CurrentUsername String username) {
-    if (uniqueCodes.matches(username, UniqueCodes.PASSWORD_RESET, uniqueCode)) {
+    if (uniqueCodes.matches(username, UniqueCodes.MAIL, uniqueCode)) {
       return success(this).build();
     }
     return failed(this).feedback("webwolf.landing_wrong").build();
@@ -46,7 +46,7 @@ public class LandingAssignment implements AssignmentEndpoint {
     ModelAndView modelAndView = new ModelAndView();
     modelAndView.addObject(
         "webwolfLandingPageUrl", landingPageUrl.replace("//landing", "/landing"));
-    modelAndView.addObject("uniqueCode", uniqueCodes.get(username, UniqueCodes.PASSWORD_RESET));
+    modelAndView.addObject("uniqueCode", uniqueCodes.get(username, UniqueCodes.MAIL));
 
     modelAndView.setViewName("lessons/webwolfintroduction/templates/webwolfPasswordReset.html");
     return modelAndView;
