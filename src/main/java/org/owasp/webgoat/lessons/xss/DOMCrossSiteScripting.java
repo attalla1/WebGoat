@@ -5,6 +5,7 @@
 package org.owasp.webgoat.lessons.xss;
 
 import static org.owasp.webgoat.container.assignments.AttackResultBuilder.failed;
+import static org.owasp.webgoat.container.assignments.AttackResultBuilder.success;
 
 import jakarta.servlet.http.HttpServletRequest;
 import java.security.SecureRandom;
@@ -32,13 +33,17 @@ public class DOMCrossSiteScripting implements AssignmentEndpoint {
     SecureRandom number = new SecureRandom();
     lessonSession.setValue("randValue", String.valueOf(number.nextInt()));
 
-    // The "webgoat-requested-by" header can be set by any caller, including script injected into
-    // the page, so it does not identify a trusted origin. The session value is therefore kept
-    // server side and never echoed back in the response.
+    // This endpoint is the lesson's intended completion mechanism: the phone-home call must
+    // return the per-session random value so the follow-up assignment can verify the solve.
+    // The DOM-XSS vulnerability itself was client side (unsafe .html() sinks in
+    // LessonContentView.js) and is fixed there; suppressing this response broke the lesson
+    // flow without removing any vulnerability.
     if (param1 == 42
         && param2 == 24
         && "dom-xss-vuln".equals(request.getHeader("webgoat-requested-by"))) {
-      return failed(this).output("phoneHome Response is not disclosed").build();
+      return success(this)
+          .output("phoneHome Response is " + lessonSession.getValue("randValue"))
+          .build();
     } else {
       return failed(this).build();
     }
