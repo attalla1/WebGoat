@@ -5,6 +5,7 @@
 package org.owasp.webgoat.webwolf.mailbox;
 
 import com.fasterxml.jackson.annotation.JsonIgnore;
+import com.fasterxml.jackson.annotation.JsonProperty;
 import jakarta.persistence.Column;
 import jakarta.persistence.Entity;
 import jakarta.persistence.GeneratedValue;
@@ -31,6 +32,7 @@ public class Email implements Serializable {
 
   @Id
   @GeneratedValue(strategy = GenerationType.IDENTITY)
+  @JsonProperty(access = JsonProperty.Access.READ_ONLY)
   private Long id;
 
   @JsonIgnore private LocalDateTime time = LocalDateTime.now();
@@ -42,7 +44,14 @@ public class Email implements Serializable {
   private String title;
   private String recipient;
 
+  /**
+   * The mail body is supplied by an unauthenticated caller, so it may be absent. Rendering a mailbox
+   * must never depend on the sender formatting its input correctly.
+   */
   public String getSummary() {
+    if (contents == null) {
+      return "-";
+    }
     return "-" + this.contents.substring(0, Math.min(50, contents.length()));
   }
 
@@ -55,6 +64,10 @@ public class Email implements Serializable {
   }
 
   public String getShortSender() {
-    return sender.substring(0, sender.indexOf("@"));
+    if (sender == null) {
+      return "";
+    }
+    int at = sender.indexOf('@');
+    return at < 0 ? sender : sender.substring(0, at);
   }
 }

@@ -15,6 +15,7 @@ import org.springframework.web.bind.annotation.PostMapping;
 import org.springframework.web.bind.annotation.RequestParam;
 import org.springframework.web.bind.annotation.ResponseBody;
 import org.springframework.web.bind.annotation.RestController;
+import org.owasp.webgoat.container.session.LessonSession;
 
 @RestController
 public class CrossSiteScriptingQuiz implements AssignmentEndpoint {
@@ -22,7 +23,14 @@ public class CrossSiteScriptingQuiz implements AssignmentEndpoint {
   private static final String[] solutions = {
     "Solution 4", "Solution 3", "Solution 1", "Solution 2", "Solution 4"
   };
-  boolean[] guesses = new boolean[solutions.length];
+
+  private static final String GUESSES = "CrossSiteScriptingQuiz.guesses";
+
+  private final LessonSession lessonSession;
+
+  public CrossSiteScriptingQuiz(LessonSession lessonSession) {
+    this.lessonSession = lessonSession;
+  }
 
   @PostMapping("/CrossSiteScripting/quiz")
   @ResponseBody
@@ -36,15 +44,16 @@ public class CrossSiteScriptingQuiz implements AssignmentEndpoint {
     int correctAnswers = 0;
 
     String[] givenAnswers = {
-      question_0_solution[0],
-      question_1_solution[0],
-      question_2_solution[0],
-      question_3_solution[0],
-      question_4_solution[0]
+      chosen(question_0_solution),
+      chosen(question_1_solution),
+      chosen(question_2_solution),
+      chosen(question_3_solution),
+      chosen(question_4_solution)
     };
 
+    boolean[] guesses = new boolean[solutions.length];
     for (int i = 0; i < solutions.length; i++) {
-      if (givenAnswers[i].contains(solutions[i])) {
+      if (givenAnswers[i].startsWith(solutions[i] + ":")) {
         // answer correct
         correctAnswers++;
         guesses[i] = true;
@@ -54,6 +63,8 @@ public class CrossSiteScriptingQuiz implements AssignmentEndpoint {
       }
     }
 
+    lessonSession.setValue(GUESSES, guesses);
+
     if (correctAnswers == solutions.length) {
       return success(this).build();
     } else {
@@ -61,9 +72,18 @@ public class CrossSiteScriptingQuiz implements AssignmentEndpoint {
     }
   }
 
+  // The radio value is "Solution <n>: <text>", so an answer only counts for the question it was
+  // picked for. A substring test let one string listing every solution pass every question.
+  private static String chosen(String[] submitted) {
+    return submitted == null || submitted.length == 0 ? "" : submitted[0];
+  }
+
   @GetMapping("/CrossSiteScripting/quiz")
   @ResponseBody
   public boolean[] getResults() {
-    return this.guesses;
+    // the answer sheet belongs to one user: a field on this singleton handed the
+    // last submitter's results to everyone
+    var guesses = (boolean[]) lessonSession.getValue(GUESSES);
+    return guesses == null ? new boolean[solutions.length] : guesses;
   }
 }

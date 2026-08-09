@@ -11,7 +11,6 @@ import lombok.AllArgsConstructor;
 import lombok.Getter;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
-import org.apache.commons.lang3.StringUtils;
 import org.springframework.boot.actuate.web.exchanges.HttpExchange;
 import org.springframework.security.core.Authentication;
 import org.springframework.stereotype.Controller;
@@ -36,7 +35,7 @@ public class Requests {
 
   @AllArgsConstructor
   @Getter
-  private class Tracert {
+  private static class Tracert {
     private final Instant date;
     private final String path;
     private final String json;
@@ -56,20 +55,31 @@ public class Requests {
     return model;
   }
 
+  /**
+   * The recorded exchanges live in a single process wide buffer, so a trace is only rendered when it
+   * can be attributed to the user asking for it. Anything we cannot attribute stays hidden: another
+   * user's exchange carries their session cookie and whatever they exfiltrated to this server.
+   */
   private boolean allowedTrace(HttpExchange t, String username) {
-    HttpExchange.Request req = t.getRequest();
-    boolean allowed = true;
-    /* do not show certain traces to other users in a classroom setup */
-    if (req.getUri().getPath().contains("/files") && !req.getUri().getPath().contains(username)) {
-      allowed = false;
-    } else if (req.getUri().getPath().contains("/landing")
-        && req.getUri().getQuery() != null
-        && req.getUri().getQuery().contains("uniqueCode")
-        && !req.getUri().getQuery().contains(StringUtils.reverse(username))) {
-      allowed = false;
+    var principal = t.getPrincipal();
+    if (principal != null) {
+      return username.equals(principal.getName());
     }
+    var request = t.getRequest();
+    if (request.getUri().getPath().contains("/files")) {
+      return isUserFileRequest(request, username);
+    }
+    return false;
+  }
 
-    return allowed;
+  private boolean isUserFileRequest(HttpExchange.Request request, String username) {
+    String[] pathSegments = request.getUri().getPath().split("/");
+    for (int index = 0; index < pathSegments.length - 1; index++) {
+      if ("files".equals(pathSegments[index])) {
+        return username.equals(pathSegments[index + 1]);
+      }
+    }
+    return false;
   }
 
   private String path(HttpExchange t) {
