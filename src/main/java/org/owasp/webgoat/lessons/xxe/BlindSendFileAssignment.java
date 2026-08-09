@@ -70,13 +70,15 @@ public class BlindSendFileAssignment implements AssignmentEndpoint, Initializabl
       @RequestBody String commentStr, @AuthenticationPrincipal WebGoatUser user) {
     var fileContentsForUser = userToFileContents.getOrDefault(user, "");
 
-    // Solution is posted by the user as a separate comment
-    if (commentStr.contains(fileContentsForUser)) {
+    // Solution is posted by the user as a separate comment. A caller without a secret of its own
+    // has nothing to send back, and every string contains the empty string, so without this guard
+    // any comment at all would complete the assignment without reading the file.
+    if (!fileContentsForUser.isEmpty() && commentStr.contains(fileContentsForUser)) {
       return success(this).build();
     }
 
     try {
-      Comment comment = comments.parseXml(commentStr, false);
+      Comment comment = comments.parseXml(commentStr);
       if (fileContentsForUser.contains(comment.getText())) {
         comment.setText("Nice try, you need to send the file to WebWolf");
       }
