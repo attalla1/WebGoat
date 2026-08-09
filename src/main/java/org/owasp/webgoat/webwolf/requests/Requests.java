@@ -11,7 +11,7 @@ import lombok.AllArgsConstructor;
 import lombok.Getter;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
-import org.apache.commons.lang3.StringUtils;
+import org.owasp.webgoat.lessons.webwolfintroduction.UniqueCodes;
 import org.springframework.boot.actuate.web.exchanges.HttpExchange;
 import org.springframework.security.core.Authentication;
 import org.springframework.stereotype.Controller;
@@ -33,6 +33,7 @@ public class Requests {
 
   private final WebWolfTraceRepository traceRepository;
   private final ObjectMapper objectMapper;
+  private final UniqueCodes uniqueCodes;
 
   @AllArgsConstructor
   @Getter
@@ -65,7 +66,10 @@ public class Requests {
     } else if (req.getUri().getPath().contains("/landing")
         && req.getUri().getQuery() != null
         && req.getUri().getQuery().contains("uniqueCode")
-        && !req.getUri().getQuery().contains(StringUtils.reverse(username))) {
+        && !req.getUri().getQuery().contains(uniqueCodes.get(username, UniqueCodes.MAIL))) {
+      /* only show a landing request carrying a unique code to the user the code was issued to;
+      the code is the user's own securely random one, no longer the predictable reversed
+      username */
       allowed = false;
     }
 

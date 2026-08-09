@@ -9,7 +9,6 @@ import java.security.MessageDigest;
 import java.security.SecureRandom;
 import java.util.Map;
 import java.util.concurrent.ConcurrentHashMap;
-import org.springframework.stereotype.Component;
 
 /**
  * Keeps the unique codes used by the WebWolf lessons. A code is generated with {@link SecureRandom}
@@ -18,8 +17,10 @@ import org.springframework.stereotype.Component;
  * anyone knowing that username. The WebWolf introduction lesson hands the code to the user by mail
  * and expects that very same code back on the landing page, so the mail and landing assignments
  * share the {@link #MAIL} flow key: only the code the user actually received verifies.
+ *
+ * <p>Registered as a bean in the parent application context (see {@code ParentConfig}) so both the
+ * WebGoat and the WebWolf child contexts observe the same codes.
  */
-@Component
 public class UniqueCodes {
 
   public static final String MAIL = "mail";
